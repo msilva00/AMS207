@@ -6,7 +6,6 @@ library(foreign)
 library(RCurl)
 library(rvest)
 library(dplyr)
-# To get the data directly from my github url #
 thepage = readLines('https://github.com/msilva00/AMS207/blob/master/TakeHome1/BirdDat.csv')
 grep('years',thepage)
 thepage[640:700]
@@ -17,10 +16,8 @@ gg = gregexpr(mypattern,datalines)
 matches = mapply(getexpr,datalines,gg)
 result = gsub(mypattern,'\\1',matches)
 names(result) = NULL
-# Main Data is stored as BirdDat #
 BirdDat = as.data.frame(matrix(result,ncol=4,byrow=TRUE)) 
-names(BirdDat) = c("Year", "RouteCount", "RedTailedHawk", "count_sighting_ratio")
-#### End of Data Gathering #########################################################################################################
+names(BirdDat) = c("Year", "RouteCount", "RedtailedHawk", "rate")##########################################
 ####################################################################################################################################
 
 x = BirdDat$RedtailedHawk

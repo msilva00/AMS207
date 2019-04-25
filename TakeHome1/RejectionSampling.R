@@ -17,7 +17,7 @@ matches = mapply(getexpr,datalines,gg)
 result = gsub(mypattern,'\\1',matches)
 names(result) = NULL
 BirdDat = as.data.frame(matrix(result,ncol=4,byrow=TRUE)) 
-names(BirdDat) = c("Year", "RouteCount", "RedTailedHawk", "count_sighting_ratio")
+names(BirdDat) = c("Year", "RouteCount", "RedtailedHawk", "rate")
 #### End of Data Gathering #########################################################################################################
 ####################################################################################################################################
 
