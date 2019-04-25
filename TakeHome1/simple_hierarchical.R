@@ -1,6 +1,5 @@
-setwd("AMS207/AMS207_Takehome1/")
 library(RCurl)
-gitstring = "https://raw.githubusercontent.com/msilva00/AMS207/master/TakeHome1/BirdDat.csv?token=ACRTZNDHONML5AQ2X6GYYMS4YEHGI"
+gitstring = "https://raw.githubusercontent.com/msilva00/AMS207/master/TakeHome1/BirdDat.csv?token=ACRTZNEW6KQ3KAP62NZOHG24YEJP6"
 BirdDat <- read.csv(text=getURL(gitstring))
 
 x = BirdDat$RedtailedHawk
