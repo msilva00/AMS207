@@ -1,0 +1,380 @@
+---
+title: "AMS 207 Homework Assignment 2"
+author: Mary Silva
+date: May 1 2018
+geometry: "margin=0.8in"
+output: pdf_document
+---
+
+
+<!-- ---
+title: "AMS 207 Homework Assignment 2"
+date: May 1 2018
+geometry: "margin=1in"
+output:
+  html_document:
+    theme: spacelab
+    highlight: pygments
+    toc: true
+    toc_depth: 2
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    code_folding: hide
+---
+ -->
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(tidy=T, tidy.opts=list(width.cutoff=60),  fig.width=6, fig.height=3, echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+Write the Bayes factor, BIC, DIC and Gelfand and Ghost criterion to compare a model where n observations are assumed to be sampled with a poisson distribution with a gamma prior, to a model where the observations are sampled from a binomial distribution, with a fixed, large, number of trials and beta prior for the probability of success.
+
+1. Consider the data on deaths by horsekicks in the Prussian army. Fit the data using the two different models.
+2. Perform a prior sensitivity analysis.
+3. Present a model comparison analysis using the criteria mentioned above.
+
+## Posterior
+
+$$
+M_1: X \sim Poi(\theta)\quad \theta \sim Ga(\alpha, \beta)
+$$
+
+The posterior is defined up to a constant by
+$$
+f(\theta|X) \propto exp\{-n\theta\}\theta^{\sum_{i=1}^n X_i} \theta^{\alpha-1} exp\{-\beta\theta\}
+$$
+
+Recognize the kernel for a Gamma distribution, the posterior is
+$$
+\theta|X \sim Ga(\alpha + \sum_{i=1}^n X_i, \beta + n)
+$$
+
+$$
+M_2: X \sim Bin(N, p) \quad N = 1000 \quad p \sim Be(c, d)
+$$
+
+The posterior is defined up to a constant by
+$$
+f(p|x) \propto p^{ \sum_{i=1}^n X_i} (1-p)^{Nn -  \sum_{i=1}^n X_i} p^{c-1}(1-p)^{d-1}
+$$
+
+Recognize the kernel for a Beta distribution, the posterior is
+
+$$
+p|X \sim Be( c + \sum_{i=1}^n X_i, d + Nn - \sum_{i=1}^n X_i)
+$$
+
+
+## Bayes factor
+In general the Bayes factor $B_{12}$ is defined by the ratio of the marginal
+
+$$
+B_{12} = \frac{m_1(X)}{m_2(X)}
+$$
+
+$$
+\begin{aligned}
+m_1(X) &=\int [\prod_{i=1}^n \frac{e^{-\theta}\theta^{x_i}}{x_i!}] \frac{\beta^\alpha}{\Gamma(\alpha)} \theta^{\alpha-1}exp\{-\beta \theta\} d\theta \\
+&= \prod_{i=1}^n\frac{1}{x_i !} \frac{\beta^\alpha}{\Gamma(\alpha)} \int exp\{-n\theta\}\theta^{\sum_{i=1}^n x_i} \theta^{\alpha-1} exp\{-\beta\theta\} d \theta \\
+&= \prod_{i=1}^n\frac{1}{x_i !} \frac{\Gamma(\alpha + \sum_{i=1}^n x_i)\beta^\alpha}{\Gamma(\alpha + \sum_{i=1}^n x_i)(\beta+n)^{\alpha + \sum_{i=1}^n x_i}}
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+m_2(X) &= \int [\prod_{i=1}^n {N \choose x_i} p^{ \sum_{i=1}^n x_i} (1-p)^{N -  \sum_{i=1}^n x_i}] \frac{1}{Beta(c, d)} p^{c-1} (1-p)^{d-1} dp\\
+&= [\prod_{i=1}^n {N \choose x_i}]\frac{Beta(c + \sum_{i=1}^n x_i, d + Nn- \sum_{i=1}^n x_i)}{Beta(c, d)}
+\end{aligned}
+$$
+
+## BIC
+BIC is defined as
+
+$$
+BIC = -2log(f(x|\hat{\theta})) + n_{param}log(n)
+$$
+
+### $M_1$ BIC
+
+To find the MLE, set the score function to 0
+
+$$
+\frac{d}{d\theta} log(f(X|\theta)) = \frac{\sum_{i=1}^n x_i}{\theta} - n = 0
+$$
+
+$$
+\hat{\theta} = \frac{\sum_{i=1}^n x_i}{n}
+$$
+
+
+$$
+\begin{aligned}
+BIC_{M_1} &= -log[\prod_{i=1}^n \frac{e^{-\hat{\theta}}\hat{\theta}^{x_i}}{x_i!}] + log(n) \\
+&= \sum_{i=1}^n log(x_i!) - \sum_{i=1}^n x_i log(\bar{X}) + n\bar{X} + log(n)
+\end{aligned}
+$$
+
+Notice that $n_{param} = 1$ in $M_1$.
+
+
+### $M_2$ BIC
+
+$$
+\frac{d}{d\theta} log(f(X|p)) = \frac{\sum_{i=1}^n x_i}{p} - \frac{Nn-\sum_{i=1}^n x_i}{1-p} = 0
+$$
+
+$$
+\hat{p} = \frac{\sum_{i=1}^n x_i}{Nn}
+$$
+
+Notice that $n_{param}=1$ in $M_2$.
+
+$$
+\begin{aligned}
+BIC_{M_2} &= -log[\prod_{i=1}^n {N \choose x_i} p^{\sum_{i=1}^n x_i}] + log(n) \\
+&= -\sum_{i=1}^n log({n \choose x_i}) - \sum_{i=1}^n x_i log(\hat{p}) - (Nn - \sum_{i=1}^n x_i) log(1-\hat{p}) + log(n)
+\end{aligned}
+$$
+
+## DIC
+
+$$
+DIC = -2log(y|\hat{\theta_{Bayes}}) + 2p_{DIC}
+$$
+
+$$
+p_{DIC} = 2(log p(y|\hat{\theta_{Bayes}}) - 2E(log(y|\theta)|y))
+$$
+
+$$
+DIC = 2log p(y|\hat{\theta_{Bayes}})- 4E(log(y|\theta)|y)
+$$
+
+For $M_1$
+
+$$
+\hat{\theta_{Bayes}} = \frac{\alpha + \sum_{i=1}^n x_i}{\beta+n}
+$$
+
+For $M_2$
+$$
+\hat{p_{Bayes}} = \frac{c + \sum_{i=1}^n}{c + d + Nn}
+$$
+
+For the first part of DIC, plug the posterior expectation into the log likelihood. For the second part, get a sample of posterior distribution and calculate the log likelihood at each point, average values at all points.
+
+## Gelfand and Ghosh Criterion
+
+$$
+D = G + P \quad G = \sum_{l=1}^n (\mu_l - x_l)^2 \quad P = \sum_{l=1}^n \sigma_l^2
+$$
+
+$$
+\mu_l = E(z_l|x) \quad \sigma_l^2 = Var(z_l|x)
+$$
+
+To find $\mu_l$ and $\sigma_l^2$, create S copy of replicas of the orginal data, where S is the size of posterior samples. Average over $z_l$ at each posterior sample to find $E(z_l|x)$ and take the variance of $z_l$ accross posterior sample to find $Var(z_l|x)$.
+
+
+# Prior sensitivity
+
+To test prior sensitivity, I selected 3 priors:  non-informative, less informative and informative for each model.
+The mean of the latter two are set to be close to the MLE solution of the two models, $\hat{\lambda} = 9,8$, $\hat{p} = 0.098$.
+The non-informative priors for both Gamma and Beta distribution sets both parameters in each case to be a small number and the
+prior mean is not necessarily centered around the MLE solution. Table 1 and 3 present the prior mean and variance, and the three
+priors have increasing variance going from informative to non-informative. Figure 1 illustrates the density of 3 different priors for each model. The non-informative priors for both models are flat. 
+
+Table 2 and 4 present the posterior summary of both models under 3 prior specifications. The results within two models are similar to each
+other, indicating that the model is not very sensitive to prior selections. However, when we give the model a very biased prior, i.e. mean not centered around MLE and the variance small, both model tends to show more variation. This is probably due to the fact that the sample size
+is very small. In this sense, the model is under heavy influence of the prior. But it is not entirely reasonable to give a biased prior, so I ruled out these prior specification.
+
+```{r}
+dat = c(3,5,7, 9,10, 18, 6, 14, 11,9, 5,11,15,6,11,17,12,15,8,4)
+
+sample_size = 1000
+
+sum_dat = sum(dat)
+N = 1000
+n = length(dat)
+generate_gamma_posterior = function(sum_dat, n, alpha, beta, sample_size){
+	sample = rgamma(sample_size, alpha + sum_dat, beta + n)
+	return(sample)
+}
+generate_beta_posterior = function(sum_dat, n, N, c, d, sample_size){
+	sample = rbeta(sample_size, c + sum_dat, d + N*n - sum_dat)
+	return(sample)
+}
+
+binomial_mle = sum_dat/(N*n)
+poisson_mle = sum_dat/n
+
+bic_m_1 = -2*sum(dpois(dat, poisson_mle, log=T)) + log(n)
+bic_m_2 = -2*sum(dbinom(dat, size = N, prob = binomial_mle, log=T))+log(n)
+
+### DIC depends on the posterior sample
+
+### Prior sensitivity analysis
+alpha_less_inform = 1
+beta_less_inform = 0.1
+alpha_inform = 10
+beta_inform = 1
+alpha_non_inform = 0.001
+beta_non_inform = 0.001
+
+gamma_grid = seq(1, 20, by=0.01)
+gamma_non_inform_den = dgamma(gamma_grid, alpha_non_inform, rate=beta_non_inform)
+gamma_less_infrom_den = dgamma(gamma_grid, alpha_less_inform, rate=beta_less_inform)
+gamma_inform_den = dgamma(gamma_grid, alpha_inform, rate=beta_inform)
+
+```
+
+```{r}
+
+
+gamma_mean = function(alpha, beta) alpha/beta
+gamma_var = function(alpha, beta) alpha/beta^2
+
+prior_spec = rbind(c(alpha_non_inform, beta_non_inform), c(alpha_less_inform, beta_less_inform), c(alpha_inform, beta_inform))
+
+m_1_prior_summary = apply(prior_spec, 1, function(x){c(gamma_mean(x[1], x[2]), gamma_var(x[1], x[2]))})
+rownames(m_1_prior_summary) = c("Prior mean", "Prior var.")
+colnames(m_1_prior_summary) = c("(0.001, 0.001)", "(1, 0.1)", "(10, 1)")
+knitr::kable(m_1_prior_summary, cap="Prior summary of Model 1")
+
+## 3 prior with mean 10 and increasing variance
+
+m_1_non_inform_sample = generate_gamma_posterior(sum_dat, n, alpha_non_inform, beta_non_inform, sample_size)
+m_1_less_inform_sample = generate_gamma_posterior(sum_dat, n, alpha_less_inform, beta_less_inform, sample_size)
+m_1_inform = generate_gamma_posterior(sum_dat, n, alpha_inform, beta_inform, sample_size)
+
+sum_stats = function(x){c(mean(x), sd(x), quantile(x, c(.025,0.25, .5,0.75, .975)))}
+
+sum_samples = function(sample_output){
+  present_table = c()
+  for (i in 1:dim(sample_output)[2]){
+    present_table = rbind(present_table, sum_stats(sample_output[, i]))
+    }
+  colnames(present_table) = c("Mean", "Sd", "2.5%", "25%", "50%", "75%", "97.5%")
+  rownames(present_table) = colnames(sample_output)
+  return(present_table)
+}
+
+m_1_samples = cbind(noninform = m_1_non_inform_sample, lessinform = m_1_less_inform_sample, inform = m_1_inform)
+
+m_1_table = sum_samples(m_1_samples)
+rownames(m_1_table) = c("(0.001, 0.001)", "(1, 0.1)", "(10, 1)")
+knitr::kable(m_1_table, cap="Posterior summaries of Model 1 under non-infromative, less informative, informative priors")
+
+d_non_inform = 0.0001
+c_non_inform = 0.0001
+c_less_inform = 0.1
+d_less_inform = 0.9
+c_inform = 1
+d_inform = 9
+
+beta_grid = seq(0, 1, by=0.01)
+non_inform_den = dbeta(beta_grid, c_non_inform, d_non_inform)
+less_infrom_den = dgamma(beta_grid, c_less_inform, d_less_inform)
+inform_den = dgamma(beta_grid, c_inform, d_inform)
+
+```
+
+```{r, fig.cap="Priors for $M_1$ and $M_2$"}
+par(mfrow=c(1, 2), cex=0.7, mar=c(2, 2, 2, 2))
+plot(gamma_non_inform_den~gamma_grid, type="l", lty=1, ylim = c(0, 0.15), ylab ="Density", xlab = bquote(theta), main=bquote("Priors for"~M[1]))
+lines(gamma_grid, gamma_less_infrom_den, type="l",  lty=2)
+lines(gamma_grid, gamma_inform_den,type="l",  lty=3)
+legend('topright', c('Noninformative', 'Less-informative', 'Informative'), lty = c(1,2,3), xpd = T, bty = 'n', horiz = F)
+plot(non_inform_den~beta_grid, type="l", lty=1, ylim = c(0, 5), ylab ="Density", xlab = "p", main=bquote("Priors for"~M[2]))
+lines(beta_grid, less_infrom_den, type="l",  lty=2)
+lines(beta_grid, inform_den,type="l",  lty=3)
+legend('topright', c('Noninformative', 'Less-informative', 'Informative'), lty = c(1,2,3), xpd = T, bty = 'n', horiz = F)
+```
+
+
+```{r}
+beta_mean = function(c, d) c/(c+d)
+beta_var = function(c, d) c*d/(c+d)^2/(c+d+1)
+
+prior_spec = rbind(c(c_non_inform, d_non_inform), c(c_less_inform, d_less_inform), c(c_inform, d_inform))
+
+m_2_prior_summary = apply(prior_spec, 1, function(x){c(beta_mean(x[1], x[2]), beta_var(x[1], x[2]))})
+
+rownames(m_2_prior_summary) = c("Prior mean", "Prior var.")
+colnames(m_2_prior_summary) = c("(0.0001, 0.0001)", "(0.1, 0.9)", "(1, 9)")
+knitr::kable(m_2_prior_summary, cap="Prior summary of Model 2")
+
+
+
+m_2_non_inform_sample = generate_beta_posterior(sum_dat, n, N, c_non_inform, d_non_inform, sample_size)
+m_2_less_inform_sample = generate_beta_posterior(sum_dat, n, N, c_less_inform, d_less_inform, sample_size)
+m_2_inform_sample = generate_beta_posterior(sum_dat, n, N, c_inform, d_inform, sample_size)
+
+m_2_samples = cbind(noninform = m_2_non_inform_sample, lessinform = m_2_less_inform_sample, inform = m_2_inform_sample)
+
+m_2_table = sum_samples(m_2_samples)
+rownames(m_2_table) = c("(0.0001, 0.0001)", "(0.1, 0.9)", "(1, 9)")
+knitr::kable(m_2_table, cap="Posterior summaries of Model 2 under non-infromative, less informative, informative priors")
+
+m_1_dic_part_1 = sum(dpois(dat, mean(m_1_non_inform_sample), log=T))
+m_1_dic_part_2 = mean(sapply(m_1_non_inform_sample, function(x){sum(dpois(dat, x, log=T))}))
+m_1_dic = 2*(m_1_dic_part_1- 2*m_1_dic_part_2)
+
+m_2_dic_part_1 = sum(dbinom(dat, size=N, mean(m_2_non_inform_sample), log=T))
+m_2_dic_part_2 = mean(sapply(m_2_non_inform_sample, function(x){sum(dbinom(dat, size=N, x, log=T))}))
+m_2_dic = 2*(m_2_dic_part_1- 2*m_2_dic_part_2)
+
+m_1_replicas = matrix(unlist(lapply(as.list(m_1_non_inform_sample), function(x){rpois(n, x)})), nrow=sample_size, byrow=T)
+m_2_replicas = matrix(unlist(lapply(as.list(m_2_non_inform_sample), function(x){rbinom(n, size=N, x)})), nrow=sample_size, byrow=T)
+
+m_1_gg = sum((apply(m_1_replicas, 2, mean)-dat)^2)+sum(apply(m_1_replicas, 2, var))
+m_2_gg = sum((apply(m_2_replicas, 2, mean)-dat)^2)+sum(apply(m_2_replicas, 2, var))
+
+calculate_bayes_factor = function(dat, params){
+  alpha = params[1]
+  beta = params[2]
+  c = params[3]
+  d = params[4]
+  sum_dat = sum(dat)
+  n = length(dat)
+  log_mar_m1 = -sum(sapply(dat, function(x){log(factorial(x))}))+lgamma(alpha + sum_dat) + alpha*log(beta)-lgamma(alpha)-(alpha + sum_dat)*log(beta+n)
+  log_mar_m2 = sum(sapply(dat, function(x){log(choose(N, x))})) + lbeta(c + sum_dat, d + N*n - sum_dat) - lbeta(c, d)
+  bayes_factor_12 = exp(log_mar_m1-log_mar_m2)
+  return(bayes_factor_12)
+}
+
+param_list = list(c(0.1, 0.01, 0.001, 0.001), c(1e-5, 1e-5, 1e-5, 1e-5), c(1e-3, 1e-3, 1e-3, 1e-3), c(alpha_non_inform, beta_non_inform, c_non_inform, d_non_inform), c(alpha_less_inform, beta_less_inform, c_less_inform, d_less_inform), c(alpha_inform, beta_inform, c_inform, d_inform))
+
+bayes_factor_list = lapply(param_list, function(x){calculate_bayes_factor(dat, x)})
+
+bayes_factor_table = rbind(unlist(bayes_factor_list), log10(unlist(bayes_factor_list)))
+row_names = lapply(param_list, function(x){paste("(", paste( as.character(x), collapse = ","), ")", sep="")})
+colnames(bayes_factor_table) = row_names
+rownames(bayes_factor_table) = c("$B_{12}$", "$log_{10}B_{12}$")
+
+```
+
+# Model selection
+
+The Bayes factor is calculated using 6 sets of priors for both models defined. The row name vector in Table 5 shows the value of $\alpha, \beta, c, d$ that specifies the Gamma and Beta prior respectively. We can see that the Bayes factor is greater than 1 using different priors, but its value highly depends on the choice of prior (ranging from 2 to 164). A Bayes factor greater than 1 means the Poisson model is preferred. Yet it is unclear how decisive such preference is. We can use Jefferey's scale of $log_{10}(B_12)$ to evaluate the evidence in favor of $M_1$. From Table 5 we see that the power of such evidence range from 0.3 to 2.2, with 0.3 indicating poor and 2.2 substantial evidence in favor of $M_1$. Such dependence on prior specification makes Bayes factor less reliable for model comparison given such a small sample size.
+
+\newpage
+
+From table 6 we can see that BIC agrees with Bayes factor, since the BIC for Poisson model is slightly lower than that of Binomial. DIC is also lower for Poisson model, although in both cases of BIC and DIC the difference is not drastic.
+
+
+If we exclude the influence of prior on computing Bayes factor by choosing the non-informative prior, we could see that the model comparison result presented by Bayes factor agrees with that given by BIC and DIC: the two models are very similar to each other. It is not surprising since when $N$ is very large, Poisson approximates the Binomial with $N$ trials well.     
+
+Gelfand and Ghost criterion presents a different story: GG criterion for Binomial is lower than that of Poisson. The source of such discrepancy is two folds: difference in posterior sample and sampling distribution. The posterior inference presented by both models are actually quite similar. When $N$ is very large in a Binomial model, we can use a Poisson model with mean $Np$ as a decent approximation. With this reasoning, we multiply 1000 to the result in Table 4 to compare to the result in Table 2. This comparison tells us the posterior inference are quite on par in two models. The high variance in Binomial model therefore can only be due to the nature of Binomial. Notice that given $Np \approx \theta$, the Poisson sampling distribution has variance $\theta$ and Binomial sampling distribution has variance $Np(1-p)\approx \theta(1-p)$, which is smaller than $\theta$. In this case, it is reasonable for Binomial model to have a lower GG, since the penalty term evaluated by variance is not as high as that of Poisson model.
+
+
+```{r}
+knitr::kable(t(bayes_factor_table), cap="Bayes factor under different priors")
+```
+
+```{r}
+model_comparison_table = cbind(BIC=c(bic_m_1, bic_m_2), DIC = c(m_1_dic, m_2_dic), GG = c(m_1_gg, m_2_gg))
+rownames(model_comparison_table) = c("Poisson", "Binomial")
+knitr::kable(model_comparison_table, cap="Information Criterias")
+
+```

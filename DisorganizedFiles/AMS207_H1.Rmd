@@ -1,0 +1,393 @@
+---
+title: "AMS 207 HW Assignment 1"
+author: Mary Silva
+date: April 14 2018
+geometry: "margin=1in"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.height = 5,
+	fig.width = 8,
+	message = FALSE,
+	warning = FALSE,
+	tidy = TRUE,
+	tidy.opts = list(width.cutoff = 60)
+)
+```
+# 3 Failure time  
+
+The failure time of a pump follows a two-parameter exponential distribution, f(y|b,m) = 1/b exp(-(y-m)/b, when y>=m.
+
+## 1\. Obtain the likelihood for b and m based on an i.i.d. sample of size n
+
+$$
+f(y_1\cdots y_n|b, m) = (\frac{1}{b})^n exp\{-\sum_{i=1}^n\frac{y_i - m}{b}\} I_{(m, \infty)}(y_{(1)})
+$$
+where $y_{(1)}$ is the minimal of $y_1, \cdots, y_n$.
+
+## 2\. Consider a suitable transformation that maps the parameters b and m to the plane
+
+Notice that the support of posterior distribution of m is $(-\infty, y_{(1)})$. To map m to the entire real line, let $t = log(y_{(1)}-m), t \in R$. Let $v = log(b), v \in R$.
+
+## 3\. Assume a sensible prior for the transformed parameters and explore the contours of the posterior distribution.
+
+Assume uniform prior on m and b.
+$$
+\pi(m, b) \propto 1
+$$
+
+Then the posterior is defined up to a constant by
+
+$$
+f(m, b|y) \propto (\frac{1}{b})^n exp\{-\sum_{i=1}^n\frac{y_i - m}{b}\} I_{(m, \infty)}(y_{(1)})
+$$
+
+Given $v = log(b), t = log(y_{(1)}-e^t), J=e^v e^t$
+$$
+\begin{aligned}
+f(m, v|y) &\propto e^{-vn} exp\{-(\sum_{i=1}^ny_i - ny_{(1)}+ne^t)e^{-v}\} e^{v} e^{t} \\
+&= e^{-v(n-1)} exp\{-(\sum_{i=1}^ny_i - ny_{(1)} + ne^t)e^{-v}\}e^t
+\end{aligned}
+$$
+
+
+```{r, fig.cap = "Contour plot of the joing posterior"}
+library(reshape2)
+library(ggplot2)
+
+t_grid = seq(-10, 20, length.out = 200)
+v_grid = seq(13, 19, length.out = length(t_grid))
+log_posterior = function(t, v){-8*v+v- (15962989-8*23721+8*exp(t))*exp(-v)+t}
+
+t_v_grid = expand.grid(t_grid, v_grid)
+post_at_t_v = apply(t_v_grid, 1, function(x){exp(log_posterior(x[1], x[2]))})
+
+post_mat = matrix(post_at_t_v, nrow=length(t_grid))
+
+contours_norm=c(1e-10, 1e-8, 1e-6, 1e-4, 1e-3,1e-2)
+
+contour(t_grid, v_grid, post_mat/sum(post_mat), levels = contours_norm, ylim=c(12, 19), drawlabels = T, xlab=expression(paste("log(", "y"[(1)], "-m)", sep="")), ylab="log(b)")
+
+```
+
+## 4\. Find a normal approximation to the posterior distribution of the transformed parameters.
+
+$$
+\begin{aligned}
+\frac{\partial}{\partial v} log(f,t|y) &= -(n-1) + (\sum_{i=1}^n y_i - ny_{(1)}+ne^t)e^{-v} = 0
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{\partial}{\partial t} log(f,t|y) &= -ne^{-v}e^t + 1 = 0
+\end{aligned}
+$$
+
+Solving these two equations together we have
+
+$$
+\hat{v} = log(\frac{\sum_{i=1}^n y_i - ny_{(1)}}{n-2})
+$$
+
+$$
+\hat{t} = log(\frac{\sum_{i=1}^n y_i - ny_{(1)}}{n(n-2)})
+$$
+
+Now take the second derivative to get the information matrix.
+$$
+\begin{aligned}
+I(t, v) &= \begin{bmatrix}
+\frac{\partial^2 log(f(v,t|y))}{\partial t^2} & \frac{\partial^2 log(f(v,t|y))}{\partial v \partial t} \\
+ \frac{\partial^2 log(f(v,t|y))}{\partial v \partial t} &  \frac{\partial^2 log(f(v,t|y))}{\partial v^2}
+\end{bmatrix} \\
+&= \begin{bmatrix}
+-ne^te^{-v}  & ne^te^{-v} \\
+ne^te^{-v} &  -(\sum_{i=1}^n y_i - ny_{(1)} + ne^t)e^{-v}
+\end{bmatrix}
+\end{aligned}
+$$
+Notice that if we write $A = \sum_{i=1}^n y_i - ny_{(1)}$, then lots of the terms cancel out when $I(v,t)$ is evaluated at $(\hat{v}, \hat{t})$. We end up with a information matrix at the posterior mode
+
+
+$$
+I(\hat{t}, \hat{v}) = \begin{bmatrix}
+ -1 & 1 \\
+1 &  -(n-1)
+\end{bmatrix}
+$$
+The variance covariance matrix for normal approximation is given by $\Sigma = (-I(\hat{v}, \hat{t}))^{-1}$. I will leave the matrix inversion to R.
+
+```{r}
+
+log_opt_posterior = function(t_v_vec){
+    return(log_posterior(t_v_vec[1], t_v_vec[2]))
+}
+
+result = optim(c(12, 14), log_opt_posterior, hessian = T, control=list(fnscale=-1))
+
+n=8
+t_hat=log((15962989 - 8*23721)/(n*(n-2)))
+v_hat = log((15962989 - 8*23721)/(n-2))
+inf_mat = matrix(c(-1, 1, 1, -7), nrow=2)
+var_mat = solve(-inf_mat)
+colnames(var_mat) = c("t", "v")
+rownames(var_mat) = c("t", "v")
+
+knitr::kable(var_mat, cap= "Variance covariance matrix of normal approximation")
+
+```
+
+
+$(\hat{t}, \hat{v}) = (12.4149, 14.2431)$.
+The variance covariance matrix is positive definite (yay!).
+
+## 5\. Use rejection sampling and SIR to approximate the posterior distribution. Compare.
+
+
+For rejection sampling I used a bivariate t with 4 degree of freedom, mean $(\hat{t}, \hat{v})$, and variance $2\Sigma$ from the normal approximation as the proposal density. The log of density ratio upper bound is optimized to be -95.73.
+
+```{r}
+library(mvtnorm)
+
+log_density_ratio = function(t_v_vec, t_loc, t_var, df = 4){
+    t = t_v_vec[1]
+    v = t_v_vec[2]
+    log_p = log_posterior(t, v)
+    log_q = dmvt(c(t, v), t_loc, t_var, df=df, log=T)
+    return(log_p-log_q)
+}
+
+log_den_opt_ratio = function(t_v_vec, t_loc, t_var, df = 4){
+    return(-log_density_ratio(t_v_vec, t_loc, t_var, df))
+}
+
+
+rejection_sample_v_t = function(t_loc, t_var, df = df, sample_size=1000){
+
+    set.seed(42)
+    result = optim(c(10, 10), log_den_opt_ratio, t_loc=t_loc, t_var = t_var, df= df)
+
+    log_c = -result$value
+
+
+    # using delta=t_loc vs rmvt(sample_size, sigma=t_var) + t_loc is not the same!!!!!
+    test_sample = rmvt(sample_size, delta=t_loc, sigma=t_var, df=df)
+
+    log_den_ratio = apply(test_sample, 1, function(x){log_density_ratio(x, t_loc, t_var, df)}) - log_c   
+
+    log_u = log(runif(sample_size))
+
+    result_sample = test_sample[which(log_u<log_den_ratio), ]
+
+    effect_sample = dim(result_sample)[1]
+
+    acceptance = effect_sample/sample_size
+    if(acceptance<0.05){
+        stop(paste("acceptance too low", acceptance))
+    }
+
+    num_iter_needed = ceiling(sample_size/acceptance)
+
+    actual_sample = rmvt(num_iter_needed, delta = t_loc, sigma=t_var, df=df)
+
+    log_den_ratio = apply(actual_sample, 1, function(x){log_density_ratio(x, t_loc, t_var, df)}) - log_c   
+
+    log_u = log(runif(num_iter_needed))
+
+    result_sample = actual_sample[which(log_u<log_den_ratio), ]
+
+    effect_sample = dim(result_sample)[1]
+
+    ## TODO Need to ensure enough sample
+    return(list(sample = result_sample[1:sample_size, ], num_iter_needed = num_iter_needed, accept_rate = effect_sample/num_iter_needed))
+}
+
+sample_size = 600
+t_loc = c(t_hat, v_hat)
+t_var = 3*var_mat
+df = 4
+v_t_rejection_sample_result = rejection_sample_v_t(t_loc, t_var, df, sample_size)
+cat("Acceptance rate is", v_t_rejection_sample_result$accept_rate)
+
+
+sir_sample_v_t = function(t_loc, t_var, df, sample_size){
+
+    num_iter_needed = 5*sample_size
+    proposal_sample =  rmvt(num_iter_needed, sigma=t_var, df=df) + t_loc
+    log_den_ratio = apply(proposal_sample, 1, function(x){log_density_ratio(x, t_loc, t_var, df)})
+    den_ratio = exp(log_den_ratio)
+
+    resample_weights = den_ratio/sum(den_ratio)
+    sum(resample_weights==0)
+    index_selected = sample(1:num_iter_needed, size=sample_size, prob=resample_weights, replace = T)
+    output=proposal_sample[index_selected, ]
+    return(output)
+}
+
+v_t_sir_sample_v_t = sir_sample_v_t(t_loc, t_var, df, sample_size)
+
+```
+
+```{r, fig.cap = "Comparing Rejection Sampling and SIR, n=200"}
+par(mfrow=c(1,2))
+contour(t_grid, v_grid, post_mat/sum(post_mat), levels = contours_norm, ylim=c(12, 19), drawlabels = T, xlab=expression(paste("log(", "y"[(1)], "-m)", sep="")),ylab="log(b)", main="Rejection Sampling")
+points(v_t_rejection_sample_result$sample[, 1], v_t_rejection_sample_result$sample[, 2], pch=20, col="blue")
+
+contour(t_grid, v_grid, post_mat/sum(post_mat), levels = contours_norm, ylim=c(12, 19), drawlabels = T, xlab=expression(paste("log(", "y"[(1)], "-m)", sep="")), ylab="log(b)", main="SIR")
+points(v_t_sir_sample_v_t[, 1], v_t_sir_sample_v_t[, 2], pch=20, col="red")
+
+```
+
+The acceptance rate for rejection sampling is roughly 37%. From figure 2, both sample seem to good representations of the distribution since majority of the points centered around the mode.
+
+To ensure better discretization of the density, I forced the proposal sample for SIR to be 5 times the desired sample size. When not taking such measure, the sample resulted from SIR is less representative of the real posterior distribution. Computationally, both algorithm need to sample more than the desired sample size to get a good representation of the distribution. However, using rejection sampling is potentially time consuming if the acceptance rate is low whereas SIR can render a sample fairly quickly.
+
+## 6\. Use importance sampling as well as a Laplace approximation to estimate the posterior mean and variance of the transformed parameters.
+
+### Use importance sampling
+
+Define $h((t, v)) = (t, v)$, define $w((t, v)) = \frac{p(t, v)}{q(t, v)}$, where $p$ is the posterior density and q is the density of multivariate t with 3 degree of freedom, location at the posterior mode and $2\Sigma$.
+
+Then the expectation of $(t,v)$ is given by
+
+$$
+E((t,v)) = \frac{\sum_{i=1}^m(t_i, v_i) w((t_i, v_i))}{\sum_{i=1}^m w((t_i, v_i))}
+$$
+
+
+The variance is given by
+
+$$
+Var(t) = \frac{\sum_{i=1}^m (t-\bar{t})^2 w((t_i, v_i))}{\sum_{i=1}^m w((t_i, v_i))}
+$$
+
+$$
+Var(v) = \frac{\sum_{i=1}^m (v-\bar{v})^2 w((t_i, v_i))}{\sum_{i=1}^m w((t_i, v_i))}
+$$
+
+
+where $(\bar{t}, \bar{v}) = E((t, v))$ from previous step.
+
+```{r}
+
+num_iter_needed = 5*sample_size
+proposal_sample =  rmvt(num_iter_needed, delta=t_loc, sigma=t_var, df=df)
+log_den_ratio = apply(proposal_sample, 1, function(x){log_density_ratio(x, t_loc, t_var, df)})
+den_ratio = exp(log_den_ratio)
+
+top = apply(proposal_sample*den_ratio, 2, sum)
+bottom = sum(den_ratio)
+
+result_mean = top/bottom
+
+
+
+
+var_h = cbind((proposal_sample[, 1]-result_mean[1])^2, (proposal_sample[, 2]-result_mean[2])^2, (proposal_sample[, 1]-result_mean[1])*(proposal_sample[, 2]-result_mean[2]))
+
+var_top = apply(var_h*den_ratio, 2, sum)
+
+result_var = var_top/bottom
+
+
+
+knitr::kable(rbind(Mean=result_mean, Var=result_var[1:2]), col.names = c("$log(y_{(1)}-m)$","$log(b)$"), cap = "Posterior mean and variance using Importance Sampling")
+```
+
+### Use Laplace approximation
+
+Implementation Notes on using Laplace approximation to find $E(g(\theta))$
+
+1. Define $h_1 = log(g(\theta)*p(\theta|y))$, find its maximum $\hat{h_1}$ and hessian at mode $H_1$.
+2. Calculate the determinant of $\Sigma_1 = [-H_1]^{-1}$ to be $d_1$
+3. Define $h = log(p(\theta|y))$, find its maximum $\hat{h}$ and determinant of inverse of hessian at mode to be $d$.
+4. $E(g(\theta)) = \frac{exp(\hat{h_1})d_1}{exp(\hat{h})d}$
+
+Since both $t \in R, v \in R$, apply the hack of adding a large number (in my case 100) to both in order to define $g((t, v))$, i.e. $g((t, v)) =(t + 100, v + 100)$ so that $log(g((t,v)))$ is effectively greater than 0 for optimization purpose. Empirically we are somewhat confident that the mean of t and v are greater than 0, which provides some support for such approach.  
+
+```{r}
+some_constant = 100
+
+log_g_t_posterior = function(t_v_vec, some_constant){
+    t = t_v_vec[1]
+    v = t_v_vec[2]
+    return(log(t+some_constant)+log_posterior(t, v))
+}
+
+
+log_g_v_posterior = function(t_v_vec, some_constant){
+    t = t_v_vec[1]
+    v = t_v_vec[2]
+    return(log(v+some_constant)+log_posterior(t, v))
+}
+
+
+log_g_t_opt_result = optim(c(10, 12), function(x){log_g_t_posterior(x, some_constant)}, hessian=T, control=list(fnscale=-1))
+
+log_g_v_opt_result = optim(c(10, 12), function(x){log_g_v_posterior(x, some_constant)}, hessian=T, control=list(fnscale=-1))
+
+marginal_opt_result = optim(c(10, 12), log_opt_posterior, hessian=T, control=list(fnscale=-1))
+
+marginal_norm_constant = exp(marginal_opt_result$value)*det(solve(-marginal_opt_result$hessian))^(0.5)
+
+t_mean_est = exp(log_g_t_opt_result$value)*det(solve(-log_g_t_opt_result$hessian))^(0.5)/marginal_norm_constant - some_constant
+
+v_mean_est = exp(log_g_v_opt_result$value)*det(solve(-log_g_v_opt_result$hessian))^(0.5)/marginal_norm_constant - some_constant
+
+```
+
+However, one draw back of this method is that the approximation linearly depends on the choice of this constant. If a larger constant is chosen instead, the approximation for expectation of t and v both increases. Therefore it is questionable whether this "hack" is reliable.
+
+```{r}
+log_t_var_posterior = function(t_v_vec, t_mean){
+    t = t_v_vec[1]
+    v = t_v_vec[2]
+    return(log((t-t_mean)^2)+log_posterior(t, v))
+}
+
+log_v_var_posterior = function(t_v_vec, v_mean){
+    t = t_v_vec[1]
+    v = t_v_vec[2]
+    return(log((v-v_mean)^2)+log_posterior(t, v))
+
+}
+
+log_t_var_opt_result = optim(c(10, 12), function(x){log_t_var_posterior(x, t_mean_est)}, hessian=T, control=list(fnscale=-1))
+
+log_v_var_opt_result = optim(c(12, 14), function(x){log_v_var_posterior(x, v_mean_est)}, hessian=T, control=list(fnscale=-1))
+
+
+t_var_est = exp(log_t_var_opt_result$value)*det(solve(-log_t_var_opt_result$hessian))^(0.5)/marginal_norm_constant
+
+v_var_est = exp(log_v_var_opt_result$value)*det(solve(-log_v_var_opt_result$hessian))^(0.5)/marginal_norm_constant
+
+
+
+knitr::kable(rbind(Mean = c(t_mean_est, v_mean_est), Var = c(t_var_est, v_var_est)), col.names=c("$log(y_{(1)}-m)$", "$log(b)$"), cap = "Posterior mean and variance using Laplace approximation")
+```
+
+Notice that the results are highly dependent on the starting points of optimization process. So maybe analytical solution to the mode and hessian should be implemented.
+
+
+## 7\. Define the reliability at time t_0 as R(t_0) = exp(-(t_0 -m)/b). Describe the posterior moments and the posterior distribution of $R(10^6)$.
+
+Acquire a sample of 2000 points with SIR since it is faster. Transform $t, v$ back to $m, b$ by $m = y_{(1) -e^t}, b = e^v$. Then get a sample of $R(10^6)$ by letting $R^{(i)} = exp\{-(-m^{(i)}+10^6)/b\}$. Find the sample moments of $\{R^{(i)}\}$ to be approximations of the posterior moments according to WLLN.
+
+```{r}
+t_v_sample = sir_sample_v_t(t_loc, t_var, df, 2000)
+m_sample = 23721 - exp(t_v_sample[, 1])
+b_sample = exp(t_v_sample[, 2])
+
+R_10_6 = exp(-(-m_sample+1e6)/b_sample)
+sum_stats = function(x){c(mean(x), sd(x), quantile(x, c(.025,.25,.5,.75,.975)))}
+r_10_6_summ = matrix(sum_stats(R_10_6), nrow=1)
+colnames(r_10_6_summ) = c("Mean", "Sd", "2.5%", "25%", "50%", "75%", "97.5%")
+rownames(r_10_6_summ) = c("R(10^6)|Y")
+knitr::kable(r_10_6_summ, cap="Summary of posterior distribution of $R(10^6)$")
+
+hist(R_10_6, main="Posterior of R(10^6)", xlab="")
+```
