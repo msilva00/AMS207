@@ -1,23 +1,10 @@
 ####################################################################################################################################
 #################################################### Preliminary Data Gathering ####################################################
 ####################################################################################################################################
-library(httr)
-library(foreign)
+# Read In Data #
 library(RCurl)
-library(rvest)
-library(dplyr)
-thepage = readLines('https://github.com/msilva00/AMS207/blob/master/TakeHome1/BirdDat.csv')
-grep('years',thepage)
-thepage[640:700]
-mypattern = '<td>([^<]*)</td>'
-datalines = grep(mypattern,thepage[640:length(thepage)],value=TRUE)
-getexpr = function(s,g)substring(s,g,g+attr(g,'match.length')-1)
-gg = gregexpr(mypattern,datalines)
-matches = mapply(getexpr,datalines,gg)
-result = gsub(mypattern,'\\1',matches)
-names(result) = NULL
-BirdDat = as.data.frame(matrix(result,ncol=4,byrow=TRUE)) 
-names(BirdDat) = c("Year", "RouteCount", "RedtailedHawk", "rate")##########################################
+gitstring = "https://raw.githubusercontent.com/msilva00/AMS207/master/TakeHome1/BirdDat.csv"
+BirdDat <- read.csv(text=getURL(gitstring))
 ####################################################################################################################################
 
 x = BirdDat$RedtailedHawk
