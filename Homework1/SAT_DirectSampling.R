@@ -27,8 +27,9 @@ sample_size = 2000
 tau_sample = sample(tau_grid, sample_size, prob=tau_post_discrete, replace=T)
 
 par(mfrow = c(1,2))
-plot(tau_post_discrete~tau_grid, type = 'l', xlab = "", ylab = expression(tau ~ " Posterior"))
-hist(tau_sample)
+plot(tau_post_discrete~tau_grid, type = 'l', xlab = "", main = expression(tau ~ " Posterior"),
+     ylab = "Density")
+hist(tau_sample, main = expression("Histogram for " ~ tau), freq = F, ylab = "", xlab = "", col = "red")
 
 
 sample_mar_mu = function(tau, sigma_sqr_dat, dat){
@@ -61,6 +62,7 @@ theta_sample = lapply(as.list(1:length(dat)), function(x){sample_theta_j_post(mu
 
 theta_post_summ = lapply(theta_sample, summary_stats)
 plot.ts(theta_sample[[1]])
+abline(h = mean(theta_sample[[1]]), col = "red")
 output_table = matrix(unlist(theta_post_summ), nrow=length(dat), byrow=T)
 
 # format for latex
@@ -92,51 +94,3 @@ plot(expected_theta[, 1]~tau_plot_grid, type="l", col=col_palette[1], ylim=c(-5,
 for(i in 2:length(dat)){
   lines(expected_theta[, i]~tau_plot_grid, col=col_palette[i])
 }
-
-
-### 2. Gibbs Sampling Method
-
-
-gibbs_sampler_for_sat = function(dat, sigma_sqr_dat, num_iters){
-  tau_cur = 1
-  theta_cur = rep(0, length(dat))
-  mu_cur = 0
-  J = length(dat)
-  output = c()
-  
-  for (i in 1:num_iters) {
-    # First sample theta vec
-    tau_cur_sqr = tau_cur^2
-    theta_mean = (dat*tau_cur_sqr + mu_cur*sigma_sqr_dat)/(tau_cur_sqr + sigma_sqr_dat)
-    theta_var = tau_cur_sqr*sigma_sqr_dat/(tau_cur_sqr + sigma_sqr_dat)
-    theta_cur = rnorm(J, theta_mean, sd = sqrt(theta_var))
-    
-    mu_cur = rnorm(1, mean(theta_cur), sd=sqrt(tau_cur_sqr/J))
-    
-    tau_cur = sqrt(1/rgamma(1, shape = J/2-1, rate = sum((theta_cur-mu_cur)^2)/2))
-    output = rbind(output, c(theta_cur, mu_cur, tau_cur))}
-  
-  colnames(output) = c(paste("theta_", 1:J, sep=""), "mu", "tau")
-  return(output)
-}
-
-num_iters=8000
-output= gibbs_sampler_for_sat(dat, sigma_sqr_dat, num_iters)
-output_thin = output[seq(2000, num_iters, by=2), ]
-summ_table = matrix(unlist(apply(output_thin, 2, summary_stats)), nrow=10, byrow=T)
-
-
-#### Meta Analysis
-tau_opt_result = optim(1, function(x){tau_log_posterior(x, dat, sigma_sqr_dat)}, method="Brent", lower=0, upper=300, hessian=T, control=list(fnscale=-1))
-tau_post_mode = tau_opt_result$value
-tau_post_var = 1/(-tau_opt_result$hessian)
-
-tau_grid = seq(1e-5, 0.5, length.out=1000)
-tau_grid_log_den = sapply(tau_grid, function(x){tau_log_posterior(x, dat, sigma_sqr_dat)})
-tau_post_discrete = exp(tau_grid_log_den-max(tau_grid_log_den))
-sample_size = 2000
-tau_sample = sample(tau_grid, sample_size, prob=tau_post_discrete, replace=T)
-
-par(mfrow = c(1,2))
-plot(tau_post_discrete~tau_grid, type="l")
-hist(tau_sample)
