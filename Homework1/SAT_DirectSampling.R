@@ -1,3 +1,9 @@
+# Read In Data #
+library(RCurl)
+# script <- getURL("https://raw.githubusercontent.com/msilva00/AMS207/master/FunctionLib/FunctionLib.R", ssl.verifypeer = FALSE)
+eval(parse(text = script))
+
+
 ### 1. Direct Sampling
 
 dat = c(29.39, 7.94, -2.75, 6.82, -0.64, 0.63, 18.01, 12.16)
@@ -20,16 +26,16 @@ tau_opt_result = optim(1, function(x){tau_log_posterior(x, dat, sigma_sqr_dat)},
 tau_post_mode = tau_opt_result$value
 tau_post_var = 1/(-tau_opt_result$hessian)
 
-tau_grid = seq(1e-5, 20, length.out=1000)
+tau_grid = seq(1e-5, 30, length.out=1000)
 tau_grid_log_den = sapply(tau_grid, function(x){tau_log_posterior(x, dat, sigma_sqr_dat)})
 tau_post_discrete = exp(tau_grid_log_den-max(tau_grid_log_den))
 sample_size = 2000
 tau_sample = sample(tau_grid, sample_size, prob=tau_post_discrete, replace=T)
 
 par(mfrow = c(1,2))
-plot(tau_post_discrete~tau_grid, type = 'l', xlab = "", main = expression(tau ~ " Posterior"),
+plot(tau_post_discrete~tau_grid, type = 'l', xlab = "Grid Values", main = expression(tau ~ " Marginal Posterior Density"),
      ylab = "Density")
-hist(tau_sample, main = expression("Histogram for " ~ tau), freq = F, ylab = "", xlab = "", col = "red")
+hist(tau_sample, main = expression(tau ~ "Marginal Posterior Histogram"), freq = F, ylab = "", xlab = "")
 
 
 sample_mar_mu = function(tau, sigma_sqr_dat, dat){
@@ -41,7 +47,7 @@ sample_mar_mu = function(tau, sigma_sqr_dat, dat){
 }
 
 mu_sample = sapply(tau_sample, function(x){sample_mar_mu(x, sigma_sqr_dat, dat)})
-hist(mu_sample, main = "marginal mu")
+hist(mu_sample, main = expression("marginal" ~ mu), freq = F, xlab = "")
 
 
 sample_theta_j_post = function(mu_sample, tau_sample, dat_j, sigma_j){
@@ -58,7 +64,7 @@ summary_stats = function(x){c(mean(x), sd(x), quantile(x, c(.025,.975)))}
 
 theta_sample = lapply(as.list(1:length(dat)), function(x){sample_theta_j_post(mu_sample, tau_sample, dat[x], sigma_sqr_dat[x])})
 
-
+hist(theta_sample[[2]], main = "Histogram of 2000 simulated draws", freq = F, xlab = expression(theta[2]), breaks = 15)
 
 theta_post_summ = lapply(theta_sample, summary_stats)
 plot.ts(theta_sample[[1]])
@@ -90,7 +96,19 @@ tau_plot_grid = result$tau
 
 par(mfrow=c(1,1))
 col_palette = rainbow(length(dat))
-plot(expected_theta[, 1]~tau_plot_grid, type="l", col=col_palette[1], ylim=c(-5, 30), xlab="tau", ylab="Expected theta_j given tau")
+plot(expected_theta[, 1]~tau_plot_grid, type="l", col=col_palette[1], 
+     ylim=c(-5, 30), xlab="tau", main=expression("Expected " ~ theta[j] ~ "|" ~ tau), ylab = "")
 for(i in 2:length(dat)){
   lines(expected_theta[, i]~tau_plot_grid, col=col_palette[i])
+  
 }
+
+text(2,30, "School")
+yloc = 30-2
+for(i in 1:length(col_palette)){
+  text(c(2,yloc), labels = LETTERS[i], col = col_palette[i])
+  yloc = yloc - 2
+  print(yloc)
+}
+points(c(2, yloc),pch = 19, col = "white", lwd = 8)
+?text
