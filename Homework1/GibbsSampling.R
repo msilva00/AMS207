@@ -35,6 +35,8 @@ for(i in 1:num_iters){
   mu_cur = mu_samps[i]
   tau_cur = tau_samps[i]
 }
+mean(tau_samps)
+var(theta_samps[,1])
 # discard burnin
 # mu_samps = tail(mu_samps,0.6*num_iters)
 # tau_samps = tail(tau_samps,0.6*num_iters)

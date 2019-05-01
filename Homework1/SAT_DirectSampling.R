@@ -5,7 +5,7 @@ eval(parse(text = script))
 
 
 ### 1. Direct Sampling
-
+mean(dat)
 dat = c(29.39, 7.94, -2.75, 6.82, -0.64, 0.63, 18.01, 12.16)
 sigma_dat = c(14.9, 10.2, 16.3, 11.0, 9.4, 11.4, 10.4, 17.6)
 sigma_sqr_dat = sigma_dat^2
