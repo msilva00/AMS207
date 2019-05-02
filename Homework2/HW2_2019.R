@@ -115,6 +115,6 @@ alpha = 1.019
 beta = 1
 (log.m2 = sum(lchoose(N,x)) + lbeta(sum(x) + alpha, n*N - sum(x) + beta) - lbeta(alpha, beta))
 
-(B.factor = exp(log.m1-log.m2))
+(B.factor = exp(log.m1-log.m2)) # close to 1 means no evidence to favor either model over the other
 
 
