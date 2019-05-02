@@ -25,12 +25,12 @@ for(i in 1:length(alpha)){
 }
 legend("topleft", legend=c("alpha = beta = 0.5", "alpha = beta = 1", "alpha = beta = 1.5", "alpha = 9.8, beta = 1"),
        lwd=rep(2,5), col=colors, bty="n", ncol=2)
-
+grid = seq(0.000001,0.000015,length=1000)
 plot(grid, dgamma(x.grid, 9.8, 1), type = 'l')
 N=10^6
 alpha = 1
 beta = 1
-grid = seq(0.000001,0.000015,length=1000)
+
 
 plot(grid,grid,type="n",xlim=c(0.000005,0.000015),ylim=c(0,1),ylab="Posterior Density",
      main="Posterior Distributions", las=1, xlab = expression(lambda))
