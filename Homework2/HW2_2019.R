@@ -198,7 +198,7 @@ gg_criterion_bin=b.g+b.p
 abs(diff(GGH))
 
 
-table = data.frame(BIC, DIC, GGH)
+(table = data.frame(BIC, DIC, GGH))
 names(table) = c("BIC", "DIC", "Gelfand and Ghosh")
 
 library(xtable)
