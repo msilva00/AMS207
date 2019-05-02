@@ -7,82 +7,88 @@ gitstring = "https://raw.githubusercontent.com/msilva00/AMS207/master/TakeHome1/
 BirdDat <- read.csv(text=getURL(gitstring))
 ####################################################################################################################################
 
-#### MODEL 2 - Beta-Binomial ####
 x = BirdDat$RedtailedHawk
-ndat = length(x)
-sumx = sum(x)
-N = 10^4
-alpha0 = 1
-beta0 = 1
-xgrid = seq(0.036,0.039,length = 1000)
-plot(xgrid, dbeta(xgrid, sumx + alpha0, ndat*N + beta0 - sumx  ),
-     type = "l", lty = 4, lwd=2, col = "black")
-
-alpha = c(60, mean(x),1, 100)
-beta = c(60,1,1, 1)
-
-alpha.star =  sumx + alpha
-beta.star = ndat*N + beta - sumx 
-
-colors = c("red","blue","green", "yellow")
-linetype = c(5,2,3,1)
-plot(xgrid,xgrid,type="n",ylab="Posterior Density",
-     main="Posterior Beta Distributions", las=1, xlab = expression(theta), ylim = c(0,2100))
-for(i in 1:length(alpha)){
-  lines(xgrid, dbeta(xgrid, alpha.star[i], beta.star[i]), 
-        type = 'l', col=colors[i],lwd=2, lty = linetype[i])
-}
-legend("topleft", legend=c("alpha = beta = 60", "alpha = 376.1, beta = 1", "alpha = beta = 1", "alpha = 100, beta = 1"),
-       lwd=rep(2,5), col=colors, lty = linetype, bty="n", ncol=1)
-alpha
-beta
-
-#######
+n = length(x)
 N = 10^6
-# the log-likelihood is a function of lambda and the data
-sterlings_logf = function(n){
-  n * log(n) - n
-}
 
+S=10000
+#### DIC Pois-Gamma ####
+alpha = 0.01
+beta = 0.01
 
-logchoose = function(N, x){
-  return(sterlings_logf(N) - sterlings_logf(x) - sterlings_logf(N-x))
-}
-
-
+post.gamma.sample = rgamma(S, alpha + sum(x), n+beta)
 
 poissonLogLik = function(x,theta){
   # total number of observations
   n = length(x)
-  xlarge = x[x>=170]
-  xsmall = x[x<=170]
-  logfact_small = log(factorial(xsmall))
-  logfact_large = xlarge * log(xlarge) - xlarge
-  
   # equation
-  # logLik = (sum(x)*log(theta)-n*theta - (sum(logfact_small) + sum(logfact_large)))
-  logLik = (sum(x)*log(theta)-n*theta - (sum(sterlings_logf(x))))
+  logLik = (sum(x)*log(theta)-n*theta - sum(lfactorial(x) ))
   return(logLik)
 }
 
-pois_ll = poissonLogLik(x, mean(x))
+hlp<-NULL
+for(t in 1:S){
+  hlp[t]<-poissonLogLik(x, post.gamma.sample[t])
+}
+lph<-poissonLogLik(x, mean(post.gamma.sample))
+pdic=2*(lph-mean(hlp))
+DIC_M1=-2*lph+2*pdic
 
-BIC_M1 = -2 * pois_ll - log(ndat)
 
-binomLogLik = function(x, theta){
+#### DIC Beta ####
+alpha = 1.019
+beta = 1
+post.beta.sample = rbeta(S, alpha + sum(x), n*N+ beta - sum(x))
+binomLogLik = function(x, theta, N){
   n = length(x)
-  xlarge = x[x>=150]
-  xsmall = x[x<=150]
-  lchoose_small = log(choose(N, xsmall))
-  lchoose_large = logchoose(N,xlarge)
-  
-  logLik = sum(x) * log(theta) + (n*N - sum(x)) * log(1 - theta) + (sum(logchoose(N,x)))
+  logLik = sum(x) * log(theta) + (n*N - sum(x)) * log(1 - theta) + sum(lchoose(N, x))
   return(logLik)
 }
 
-bin.mle = sum(x)/(length(x) * N)
-bin_ll = binomLogLik(x, bin.mle)
+hlp<-NULL
+for(t in 1:S){
+  hlp[t]<-binomLogLik(x, post.beta.sample[t],N)
+}
+lph<-binomLogLik(x, mean(post.beta.sample), N)
+pdic=2*(lph-mean(hlp))
+DIC_M2=-2*lph+2*pdic
 
-BIC_M2 = -2 * bin_ll + log(length(x))
-print(c(BIC_M1, BIC_M2))
+(DIC = c(DIC_M1, DIC_M2))
+abs(diff(DIC))
+
+
+#### Gelfand and Ghosh Poisson ####
+### Calculate Gelfand and Ghosh#####################
+#first create predicted values for each of our posterior samples
+#n columns (as many columns as we have data points) and S rows (number of posterior samples)
+g.pred_values=matrix(0,S,n)
+for(i in 1:length(post.gamma.sample)){
+  #obtain one prediction for each hospital at each posterior sample
+  g.pred_values[i,]=rpois(rep(1,n), rep(post.gamma.sample[i], length(x)))
+}
+
+#G term of gelfand and ghosh
+g.g=sum((apply(g.pred_values, 2,mean)-x)^2)
+g.p=sum(apply(g.pred_values,2,var))
+gg_criterion_pois=g.g+g.p
+
+
+#### Gelfand and Ghosh Binomial ####
+### Calculate Gelfand and Ghosh#####################
+#first create predicted values for each of our posterior samples
+#n columns (as many columns as we have data points) and S rows (number of posterior samples)
+b.pred_values=matrix(0,S,n)
+for(i in 1:length(post.beta.sample)){
+  #obtain one prediction for each hospital at each posterior sample
+  b.pred_values[i,]=rbinom(rep(1,n), N, rep(post.beta.sample[i], length(x)))
+}
+
+#G term of gelfand and ghosh
+b.g=sum((apply(b.pred_values, 2,mean)-x)^2)
+b.p=sum(apply(b.pred_values,2,var))
+gg_criterion_bin=b.g+b.p
+
+(GGH = c(gg_criterion_pois, gg_criterion_bin))
+abs(diff(GGH))
+
 
