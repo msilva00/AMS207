@@ -92,3 +92,4 @@ gg_criterion_bin=b.g+b.p
 abs(diff(GGH))
 
 
+

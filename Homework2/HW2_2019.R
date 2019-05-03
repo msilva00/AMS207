@@ -13,17 +13,17 @@ mean(x)/var(x)
 mean(x)^2/var(x)
 (alpha1 = (mean(x))^2/var(x))
 
-# beta1 = 0.01
-# alpha1 = 0.01
+beta1 = 0.01
+alpha1 = 0.01
 
 x.grid = seq(365,385, length = 1000)
 plot(x.grid, dgamma(x.grid, sum(x) + alpha1, ndat + beta1), type = "l", lty = 4, lwd=2, col = "black")
-alpha = c(.01,1.5,alpha1, mean(x))
-beta = c(.01,1.5,beta1, 1)
+alpha = c(10,0.001,alpha1, mean(x))
+beta = c(1,0.001,beta1, 1)
 alpha.star = alpha + sum(x)
-beta.star = ndat + beta
+beta.star = length(x) + beta
 xgrid1 = seq(340,385, length = 1000)
-colors = c("red","blue","black", "yellow")
+colors = c("blue","red","black", "yellow")
 linetype = c(6,2,5,3)
 plot(xgrid1,xgrid1,type="n",ylab="Posterior Density",
      main="Posterior Gamma Distributions", las=1, xlab = expression(lambda), ylim = c(0,0.20))
@@ -31,7 +31,8 @@ for(i in 1:length(alpha)){
   lines(xgrid1, dgamma(xgrid1, alpha.star[i], beta.star[i]), 
         type = 'l', col=colors[i],lwd=2, lty = linetype[i])
 }
-legend("topleft", legend=c("alpha = beta = 0.01", "alpha = beta = 1.5", 
+legend("topleft", legend=c(paste("alpha =", alpha[1], "; beta =", beta[1]), 
+                           paste("alpha = beta =", alpha[2]), 
                            paste("alpha = ", round(alpha1,2), "\n beta =", round(beta1,2), "\n"),
                            paste("alpha = ", round(mean(x),1), "\n beta = 1")),
        lwd=rep(2,5), col=colors, lty = linetype, bty="n", ncol=1)
@@ -76,7 +77,12 @@ legend("topleft", legend=c(paste("alpha = beta = ", alpha[1]),
                            paste("alpha =", alpha[4], ", beta =", beta[4])),
        lwd=lwidth, col=colors, lty = linetype, bty="n", ncol=1)
 
+for(i in 1:4){
+  zzz = rbeta(10000,alpha[i],beta[i])
+  print(paste(round(mean(zzz), 5), round(var(zzz), 5)))
+}
 
+var(x)/N
 ####### BIC ######
 
 poissonLogLik = function(x,theta){
@@ -113,7 +119,7 @@ log.m1 = alpha* log(beta) + lgamma(sum(x) + alpha) - lgamma(alpha) -
 
 
 N = 10^6
-alpha = 3.761e-04
+alpha = 3.761e-4
 beta = 1
 log.m2 = sum(lchoose(N,x)) + lbeta(sum(x) + alpha, n*N - sum(x) + beta) - lbeta(alpha, beta)
 
@@ -163,45 +169,77 @@ DIC_M2=-2*lph+2*pdic
 
 (DIC = c(DIC_M1, DIC_M2, abs(diff(c(DIC_M1, DIC_M2)))))
 
+### Using Replicates:
+# #### Gelfand and Ghosh Poisson ####
+# ### Calculate Gelfand and Ghosh#####################
+# #first create predicted values for each of our posterior samples
+# #n columns (as many columns as we have data points) and S rows (number of posterior samples)
+# g.pred_values=matrix(0,S,n)
+# for(i in 1:length(post.gamma.sample)){
+#   #obtain one prediction for each hospital at each posterior sample
+#   g.pred_values[i,]=rpois(rep(1,n), rep(post.gamma.sample[i], length(x)))
+# }
+# 
+# #G term of gelfand and ghosh
+# g.g=sum((apply(g.pred_values, 2,mean)-x)^2)
+# g.p=sum(apply(g.pred_values,2,var))
+# gg_criterion_pois=g.g+g.p
+# 
+# 
+# #### Gelfand and Ghosh Binomial ####
+# ### Calculate Gelfand and Ghosh#####################
+# #first create predicted values for each of our posterior samples
+# #n columns (as many columns as we have data points) and S rows (number of posterior samples)
+# b.pred_values=matrix(0,S,n)
+# for(i in 1:length(post.beta.sample)){
+#   #obtain one prediction for each hospital at each posterior sample
+#   b.pred_values[i,]=rbinom(rep(1,n), N, rep(post.beta.sample[i], length(x)))
+# }
+# 
+# #G term of gelfand and ghosh
+# b.g=sum((apply(b.pred_values, 2,mean)-x)^2)
+# b.p=sum(apply(b.pred_values,2,var))
+# gg_criterion_bin=b.g+b.p
+# 
+# (GGH = c(gg_criterion_pois, gg_criterion_bin, abs(diff(c(gg_criterion_pois, gg_criterion_bin)))))
+# abs(diff(GGH))
 
-#### Gelfand and Ghosh Poisson ####
-### Calculate Gelfand and Ghosh#####################
-#first create predicted values for each of our posterior samples
-#n columns (as many columns as we have data points) and S rows (number of posterior samples)
-g.pred_values=matrix(0,S,n)
-for(i in 1:length(post.gamma.sample)){
-  #obtain one prediction for each hospital at each posterior sample
-  g.pred_values[i,]=rpois(rep(1,n), rep(post.gamma.sample[i], length(x)))
-}
 
-#G term of gelfand and ghosh
-g.g=sum((apply(g.pred_values, 2,mean)-x)^2)
-g.p=sum(apply(g.pred_values,2,var))
-gg_criterion_pois=g.g+g.p
+#### Gelfand and Ghosh (closed form) ####
+alpha = 0.01
+beta = 0.01
+Epois = (sum(x) + alpha)/(n+beta)
+VarPois = (sum(x) + alpha)*(n + beta + 1)/(n + beta)^2
+G = sum((Epois - x)^2)
+P = VarPois
+(GG11 = G + P)
+
+alpha = 1.01
+beta = 1
+alpha_star = sum(x) + alpha
+beta_star = n*N + beta - sum(x)
+Ebetabin = N*alpha_star/(alpha_star + beta_star)
+varnum = N*alpha_star*beta_star*(alpha_star + beta_star + n)
+varden = (alpha_star + beta_star)^2*(alpha_star + beta_star + 1)
+VarBetabin = varnum/varden
+G2 = sum((Ebetabin - x)^2)
+P2 = VarBetabin
+GG2 = G2 + P2
+
+(GGH = c(GG11, GG2,abs(diff(c(GG11,GG2))) ))
 
 
-#### Gelfand and Ghosh Binomial ####
-### Calculate Gelfand and Ghosh#####################
-#first create predicted values for each of our posterior samples
-#n columns (as many columns as we have data points) and S rows (number of posterior samples)
-b.pred_values=matrix(0,S,n)
-for(i in 1:length(post.beta.sample)){
-  #obtain one prediction for each hospital at each posterior sample
-  b.pred_values[i,]=rbinom(rep(1,n), N, rep(post.beta.sample[i], length(x)))
-}
 
-#G term of gelfand and ghosh
-b.g=sum((apply(b.pred_values, 2,mean)-x)^2)
-b.p=sum(apply(b.pred_values,2,var))
-gg_criterion_bin=b.g+b.p
 
-(GGH = c(gg_criterion_pois, gg_criterion_bin, abs(diff(c(gg_criterion_pois, gg_criterion_bin)))))
-abs(diff(GGH))
+
+
+
 
 BF = c(round(B.factor,2), "        ", "        ")
 (table = data.frame(BIC, DIC, GGH, BF))
 names(table) = c("BIC", "DIC", "Gelfand and Ghosh", "Bayes Factor")
 rownames(table) = c("M1", "M2", "Difference")
+table
 library(xtable)
 xtable(table)
 
