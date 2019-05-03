@@ -84,7 +84,6 @@ for(i in 1:4){
 
 var(x)/N
 ####### BIC ######
-
 poissonLogLik = function(x,theta){
   # total number of observations
   n = length(x)
@@ -101,7 +100,7 @@ binomLogLik = function(x, theta, N){
 
 pois_ll = poissonLogLik(x, mean(x))
 
-BIC_M1 = -2 * pois_ll - log(ndat)
+BIC_M1 = -2 * pois_ll + log(ndat)
 
 bin.mle = sum(x)/(length(x) * N)
 bin_ll = binomLogLik(x, bin.mle, N)
